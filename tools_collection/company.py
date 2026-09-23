@@ -4,6 +4,9 @@ from agentscope.permission import (
     PermissionDecision,
     PermissionBehavior,
 )
+from middleware_collection.required_params_middleware import (
+    RequiredParamsMiddleware,
+)
 
 
 ATTENDANCE_DATA = {
@@ -68,7 +71,9 @@ def lookup_department(
 
 attendance_tool = FunctionTool(
     lookup_department,
-
+    middlewares=[
+        RequiredParamsMiddleware(),
+    ],
     permission=PermissionDecision(
         behavior=PermissionBehavior.ALLOW,
         message="公司考勤查询属于只读操作，允许自动执行。",

@@ -21,7 +21,7 @@ async def main():
     response1 = await session_manager.chat(
         session_id=session_id,
 
-        message="今天的天气怎么样？",
+        message="大数据部门考勤情况",
 
         selected_tools=selected_tools,
     )
@@ -39,7 +39,7 @@ async def main():
     response2 = await session_manager.chat(
         session_id=session_id,
 
-        message="攀枝花",
+        message="周考勤",
 
         selected_tools=selected_tools,
     )

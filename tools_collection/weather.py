@@ -9,6 +9,9 @@ from agentscope.permission import (
     PermissionDecision,
     PermissionBehavior,
 )
+from middleware_collection.required_params_middleware import (
+    RequiredParamsMiddleware,
+)
 
 
 # =========================
@@ -132,6 +135,9 @@ def get_weather(
 
 weather_tool = FunctionTool(
     get_weather,
+    middlewares=[
+        RequiredParamsMiddleware(),
+    ],
     permission=PermissionDecision(
         behavior=PermissionBehavior.ALLOW,
         message="天气查询属于只读操作，允许自动执行。",
