@@ -13,6 +13,7 @@ from agent_collection.agent_factory import (
 class SessionEntry:
     agent: Agent
     selected_tools: tuple[str, ...]
+    selected_mcps: tuple[str, ...]
     lock: asyncio.Lock
 
 
@@ -34,14 +35,23 @@ class SessionManager:
             sorted(set(selected_tools))
         )
 
-    def get_or_create_session(
-        self,
-        session_id: str,
-        selected_tools: list[str],
+    async def get_or_create_session(
+            self,
+            session_id: str,
+            selected_tools: list[str],
+            selected_mcps: list[str] | None = None,
     ) -> SessionEntry:
 
-        tool_signature = self._normalize_tools(
-            selected_tools
+        tool_signature = tuple(
+            sorted(
+                set(selected_tools or [])
+            )
+        )
+
+        mcp_signature = tuple(
+            sorted(
+                set(selected_mcps or [])
+            )
         )
 
         entry = self._sessions.get(
@@ -49,20 +59,31 @@ class SessionManager:
         )
 
         # ==============================
-        # 第一次进入当前会话
+        # 新会话
         # ==============================
 
         if entry is None:
-
-            agent = create_agent(
+            agent = await create_agent(
                 selected_tools=list(
                     tool_signature
-                )
+                ),
+
+                selected_mcps=list(
+                    mcp_signature
+                ),
             )
 
             entry = SessionEntry(
                 agent=agent,
-                selected_tools=tool_signature,
+
+                selected_tools=(
+                    tool_signature
+                ),
+
+                selected_mcps=(
+                    mcp_signature
+                ),
+
                 lock=asyncio.Lock(),
             )
 
@@ -78,35 +99,41 @@ class SessionManager:
             return entry
 
         # ==============================
-        # 用户修改了前端选择的工具
+        # Tool 或 MCP 配置发生变化
         # ==============================
 
         if (
-            entry.selected_tools
-            != tool_signature
+                entry.selected_tools
+                != tool_signature
+                or
+                entry.selected_mcps
+                != mcp_signature
         ):
-
-            print(
-                f"[Session] 工具发生变化："
-                f"{entry.selected_tools}"
-                f" -> {tool_signature}"
+            old_state = (
+                entry.agent.state
             )
 
-            # 保存原来的上下文状态
-            old_state = entry.agent.state
-
-            # 使用新 Toolkit 创建 Agent，
-            # 但继续使用原来的 AgentState
-            new_agent = create_agent(
+            new_agent = await create_agent(
                 selected_tools=list(
                     tool_signature
                 ),
+
+                selected_mcps=list(
+                    mcp_signature
+                ),
+
+                # 保留会话上下文
                 state=old_state,
             )
 
             entry.agent = new_agent
+
             entry.selected_tools = (
                 tool_signature
+            )
+
+            entry.selected_mcps = (
+                mcp_signature
             )
 
         return entry
@@ -116,15 +143,17 @@ class SessionManager:
         session_id: str,
         message: str,
         selected_tools: list[str],
+        selected_mcps: list[str] | None = None,
     ) -> str:
 
-        entry = self.get_or_create_session(
+        entry = await self.get_or_create_session(
             session_id=session_id,
+
             selected_tools=selected_tools,
+
+            selected_mcps=selected_mcps,
         )
 
-        # 同一 session 不允许同时处理两条消息，
-        # 避免上下文顺序错乱
         async with entry.lock:
 
             msg = UserMsg(

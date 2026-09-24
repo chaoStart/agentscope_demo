@@ -17,7 +17,8 @@ amap_mcp_client = MCPClient(
     # SSE 属于远程 HTTP MCP。
     # 这里使用长连接模式，应用启动时 connect，
     # 应用结束时 close。
-    is_stateful=True,
+    # is_stateful=True,
+    is_stateful=False,
 
     mcp_config=HttpMCPConfig(
         url=MODELSCOPE_AMAP_MCP_URL,
